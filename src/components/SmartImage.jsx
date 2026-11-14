@@ -2,6 +2,19 @@ import React from "react";
 import { useState } from "react";
 import { useLanguage } from "../context/LanguageContext";
 
+// Only real image addresses are requested. Placeholder text such as
+// "your-image-url.jpg" (or anything that is not an http(s), root-relative,
+// data: or blob: address) is treated as "no image" instead of firing a
+// request that is guaranteed to fail.
+function isUsableImageUrl(src) {
+  if (typeof src !== "string") return false;
+  const value = src.trim();
+  if (!value) return false;
+  if (/your-image-url|placeholder|example\.com/i.test(value)) return false;
+  if (/^https?:\/\/[^\s/]+\.[^\s/]+/i.test(value)) return true;
+  return /^(\/|\.\.?\/|data:image\/|blob:)/i.test(value);
+}
+
 /**
  * Image with an honest fallback.
  *
@@ -14,7 +27,7 @@ export default function SmartImage({ src, alt, className = "", caption = null, s
   const { t } = useLanguage();
   const [failed, setFailed] = useState(false);
 
-  if (!src || failed) {
+  if (!isUsableImageUrl(src) || failed) {
     return (
       <div
         role="img"

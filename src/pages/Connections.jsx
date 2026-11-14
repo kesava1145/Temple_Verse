@@ -6,6 +6,7 @@ import {
   MapPin, Search, Sparkles, Timer, Network, Scale, Flower2, ChevronRight,
 } from "lucide-react";
 import { getTempleConnections } from "../services/templeConnections";
+import { profileOf } from "../services/templeProfile";
 import { useLanguage } from "../context/LanguageContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorState from "../components/ErrorState";
@@ -26,20 +27,24 @@ const FILTERS = [
   { id: "architecture", label: "Architecture", icon: Landmark },
 ];
 
-const dynastyOf = (temple) => {
-  const text = `${temple.historical_period || ""} ${temple.architectural_style || ""}`;
-  return ["Chola", "Nayak", "Eastern Ganga", "Vijayanagara", "Pallava"].find((x) => text.toLowerCase().includes(x.toLowerCase())) || "Dynasty not specified";
-};
+const labelsOf = (temple, dim) =>
+  [...profileOf(temple)[dim].values()].sort((a, b) => b.w - a.w).map((v) => v.label);
+const dynastyOf = (temple) => labelsOf(temple, "dynasty")[0] || "Dynasty not specified";
 const periodOf = (temple) => {
-  const match = String(temple.historical_period || "").match(/(?:c\.\s*)?(\d{1,2}(?:st|nd|rd|th)?\s+century|\d{3,4}\s*CE)/i);
-  return match?.[1] || temple.historical_period || "Period not specified";
+  const c = labelsOf(temple, "period").find((l) => /century/.test(l));
+  return c || temple.historical_period || "Period not specified";
 };
-const metaValue = (temple, tab) => {
-  if (tab === "dynasty") return dynastyOf(temple);
-  if (tab === "period") return periodOf(temple);
-  if (tab === "region") return temple.state || "Region not specified";
-  if (tab === "materials") return temple.materials || temple.construction_material || "Not recorded";
-  return temple.cultural_significance || "Tradition details are being curated.";
+// A temple can belong to several groups (e.g. two materials, two legends), so this returns a list.
+const metaValues = (temple, tab) => {
+  if (tab === "dynasty") return [dynastyOf(temple)];
+  if (tab === "period") return [periodOf(temple)];
+  if (tab === "region") return [temple.state || "Region not specified"];
+  if (tab === "materials") {
+    const v = labelsOf(temple, "material");
+    return v.length ? v : ["Not recorded"];
+  }
+  const v = labelsOf(temple, "mythology");
+  return v.length ? v : ["Cultural heritage"];
 };
 
 function TempleMiniCard({ temple, reason, name }) {
@@ -90,12 +95,14 @@ export default function Connections() {
       : [selectedTempleData, ...selectedConnections.map((e) => e.from.id === selectedTempleData?.id ? e.temple : e.from)].filter(Boolean);
     const grouped = new Map();
     temples.forEach((temple) => {
-      const value = metaValue(temple, selectedMeta);
-      const key = selectedMeta === "legends" ? "Cultural heritage" : value;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(temple);
+      metaValues(temple, selectedMeta).forEach((key) => {
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(temple);
+      });
     });
-    return [...grouped.entries()].sort((a, b) => b[1].length - a[1].length);
+    const unknown = /not specified|not recorded|^Cultural heritage$/;
+    return [...grouped.entries()].sort((a, b) =>
+      (unknown.test(a[0]) ? 1 : 0) - (unknown.test(b[0]) ? 1 : 0) || b[1].length - a[1].length);
   }, [filteredGroups, selectedMeta, selectedTemple, selectedTempleData, selectedConnections]);
   const compareTemples = selectedTempleData ? [selectedTempleData, ...selectedConnections.slice(0, 2).map((e) => e.from.id === selectedTempleData.id ? e.temple : e.from)] : [];
 
@@ -149,7 +156,7 @@ export default function Connections() {
 
       <div className="connection-bottom-grid"><section className="connection-network"><h2><Network/> Connection Network</h2>{selectedTempleData ? <><div className="connection-network-center"><Landmark/><strong>{name(selectedTempleData)}</strong></div><div className="connection-network-links">{selectedConnections.slice(0,6).map((edge)=><Link key={`${edge.from.id}-${edge.temple.id}`} to={`/temple/${(edge.from.id===selectedTempleData.id?edge.temple:edge.from).slug}`}><span>{edge.reasons[0]?.type === "deity" ? <Flower2/> : edge.reasons[0]?.type === "architecture" ? <Landmark/> : <BookOpen/>}</span><strong>{name(edge.from.id===selectedTempleData.id?edge.temple:edge.from)}</strong><small>{edge.reasons.map(r=>r.label).join(" · ")}</small></Link>)}</div></> : <p>No connection data available.</p>}</section>
         <section className="connection-comparison"><h2><Scale/> Comparison Summary</h2><div className="connection-table-scroll"><table><thead><tr><th>Attribute</th>{compareTemples.map((t)=><th key={t.id}>{name(t)}</th>)}</tr></thead><tbody>
-          {[ ["Deity",(t)=>t.main_deity], ["Dynasty",dynastyOf], ["Period",(t)=>t.historical_period], ["Architecture",(t)=>t.architectural_style], ["Region",(t)=>t.state], ["UNESCO",(t)=>t.unesco?"Yes":"Not listed"] ].map(([label,get])=><tr key={label}><th>{label}</th>{compareTemples.map((t)=><td key={t.id}>{get(t)}</td>)}</tr>)}
+          {[ ["Deity",(t)=>t.main_deity || labelsOf(t,"deity").slice(0,2).join(", ") || "Not recorded"], ["Dynasty",dynastyOf], ["Period",periodOf], ["Architecture",(t)=>t.architectural_style || labelsOf(t,"architecture").slice(0,2).join(", ") || "Not recorded"], ["Region",(t)=>t.state], ["UNESCO",(t)=>t.unesco?"Yes":"Not listed"] ].map(([label,get])=><tr key={label}><th>{label}</th>{compareTemples.map((t)=><td key={t.id}>{get(t)}</td>)}</tr>)}
         </tbody></table></div></section></div>
       <p className="connections-editorial-note">Connections are based on the catalogue's recorded deity, architectural style, historical period and curated tradition themes. Similarity is a discovery aid; it does not imply that every temple shares the same origin or story.</p>
     </div>
