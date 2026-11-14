@@ -1,0 +1,35 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@deno/installer-shell-setup@*": "0.3.4"
+  },
+  "jsr": {
+    "@deno/installer-shell-setup@0.3.4": {
+      "integrity": "48665d1a737d487cce6874bc97bba70a5aeffa7053aca3f60df93c6fab8963b4"
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@supabase/supabase-js@^2.119.0",
+        "npm:@tailwindcss/vite@4.1.17",
+        "npm:@types/node@22.19.17",
+        "npm:@types/react-dom@19.2.3",
+        "npm:@types/react@19.2.7",
+        "npm:@vitejs/plugin-react@5.1.1",
+        "npm:clsx@2.1.1",
+        "npm:leaflet@^1.9.4",
+        "npm:lucide-react@^1.37.0",
+        "npm:react-dom@19.2.6",
+        "npm:react-router-dom@^7.18.3",
+        "npm:react@19.2.6",
+        "npm:supabase@^3.1.0",
+        "npm:tailwind-merge@3.4.0",
+        "npm:tailwindcss@4.1.17",
+        "npm:typescript@5.9.3",
+        "npm:vite-plugin-singlefile@2.3.0",
+        "npm:vite@7.3.2"
+      ]
+    }
+  }
+}
